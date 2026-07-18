@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Poetry / venv
+.venv/
+dist/
+
+# Ambiente / segredos
+.env
+*.pem
+
+# AWS
+.aws-sam/
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
