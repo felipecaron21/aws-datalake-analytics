@@ -8,6 +8,9 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.9,<3.10"
 dependencies = [
+    "pyarrow (<19.0)",
+    "boto3 (<1.40)",
+    "pandas (<3.0)"
 ]
 
 [tool.poetry]
@@ -16,3 +19,10 @@ packages = [{include = "aws_datalake_analytics", from = "src"}]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (<9.0)",
+    "black (<25.0)",
+    "ruff (<0.16)"
+]
