@@ -21,3 +21,7 @@ dist/
 # IDEs
 .vscode/
 .idea/
+
+# Dados brutos (baixar via Kaggle, ver README)
+data/raw/*
+!data/raw/.gitkeep
