@@ -22,7 +22,11 @@ date_columns = [
     "order_estimated_delivery_date",
 ]
 
-df_orders[string_columns] = df_orders[string_columns].astype("string")
-df_orders[date_columns] = df_orders[date_columns].apply(pd.to_datetime)
+try:
+    df_orders[string_columns] = df_orders[string_columns].astype("string")
+    df_orders[date_columns] = df_orders[date_columns].apply(pd.to_datetime)
+except Exception as erro:
+    print(f"Erro ao aplicar tipagem nas colunas de orders: {erro}")
+    raise
 
 escrever_parquet_no_s3(cliente_s3, df_orders, bucket_name, bronze_key)
