@@ -18,6 +18,19 @@ def ler_csv_do_s3(cliente_s3, bucket, key):
         raise
 
 
+def ler_parquet_do_s3(cliente_s3, bucket, key):
+    try:
+        response = cliente_s3.get_object(Bucket=bucket, Key=key)
+        parquet_content = response["Body"].read()
+        df = pd.read_parquet(io.BytesIO(parquet_content))
+        return df
+    except Exception as erro:
+        print(
+            f"Erro ao ler o arquivo parquet do S3 (bucket={bucket}, key={key}): {erro}"
+        )
+        raise
+
+
 def escrever_parquet_no_s3(cliente_s3, dataframe, bucket, key):
     try:
         parquet_buffer = io.BytesIO()
