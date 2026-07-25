@@ -140,3 +140,34 @@ modelagem dimensional. São propósitos opostos (escrita vs. leitura,
 integridade vs. performance de consulta), por isso um pipeline de
 transformação (bronze → silver → gold) é necessário — não seria possível
 simplesmente espelhar a estrutura do banco transacional para uso analítico.
+
+## 8. Estratégias para lidar com nulos gerados por agregação
+
+**Contexto:** ao agregar `geolocation` por CEP usando `mean()`, surgiu a
+dúvida sobre o que fazer caso a agregação gerasse valores nulos (cenário
+hipotético: um CEP cujos registros de lat/lng já fossem todos nulos na
+origem, tornando a média indefinida).
+
+**Validação aplicada neste projeto:** antes de decidir, foi confirmado que
+`geolocation_lat` e `geolocation_lng` não possuem nenhum valor nulo na
+origem (bronze) — portanto, a agregação por média não gera nulos neste
+caso específico, e nenhuma estratégia de tratamento precisou ser aplicada.
+
+**Estratégias possíveis, caso nulos existissem** (registrado como referência
+para decisões futuras):
+
+1. **Excluir a linha/grupo** — remove o registro (ex: o CEP) que resultaria
+   em nulo. Mais simples, mas perde a informação daquele registro em
+   qualquer lugar do modelo que dependa dele.
+2. **Substituir por valor sentinela** — atribuir um valor claramente inválido
+   (ex: `0.0`) no lugar do nulo. Mantém a linha existindo, mas exige que
+   qualquer consumidor downstream saiba identificar e filtrar esse valor.
+3. **Manter o nulo** — não decidir nada na silver, deixando o tratamento
+   (excluir, substituir, ignorar) a critério de quem for consumir o dado na
+   gold ou na ferramenta de BI, conforme o contexto de uso específico.
+
+**Critério de decisão:** não existe estratégia universalmente correta — a
+escolha depende do que a coluna afetada será usada para fazer downstream
+(ex: nulos em coordenadas geográficas tendem a quebrar visualizações de mapa
+em ferramentas de BI, o que pesaria a favor de exclusão ou tratamento
+explícito antes da gold).
