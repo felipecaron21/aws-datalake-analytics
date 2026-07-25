@@ -101,3 +101,42 @@ tabelas via `zip_code_prefix` (ex: obter a lat/long de um cliente ou
 vendedor), será necessário decidir uma estratégia de agregação — candidatas
 incluem usar a média de lat/long por CEP, ou selecionar uma ocorrência
 representativa — já que hoje existe uma relação 1:N entre CEP e coordenadas.
+
+## 6. Onde a modelagem dimensional acontece no pipeline
+
+**Esclarecimento:** a modelagem dimensional (star schema, no caso deste
+projeto) é aplicada exclusivamente na camada **gold**. As camadas bronze e
+silver são independentes de qual modelagem final será usada — bronze cuida de
+ingestão tipada, silver cuida de limpeza/conformação/enriquecimento pontual
+das entidades originais, sem reorganizá-las em fato/dimensão.
+
+**Prova de que essa separação está correta:** se a modelagem escolhida
+mudasse de star schema para outra abordagem (ex: snowflake schema), nenhuma
+alteração seria necessária em bronze ou silver — apenas na forma como a gold
+é construída a partir da silver. Isso confirma que a responsabilidade de
+modelagem está isolada na camada certa.
+
+## 7. Modelagem relacional (transacional) vs. modelagem dimensional (analítica)
+
+**Contexto da dúvida:** ao pensar em modelagem, surge a pergunta natural —
+se o banco transacional que originou os dados (o sistema de produção do
+Olist) já foi modelado por um time de desenvolvimento, por que não usar essa
+mesma modelagem no banco analítico?
+
+**Esclarecimento:** bancos transacionais (OLTP) sempre passam por um processo
+de modelagem, mas usam **modelagem relacional normalizada** (tipicamente 3ª
+forma normal) — o objetivo é evitar redundância, garantir integridade
+referencial, e otimizar para escritas frequentes (inserir um pedido, atualizar
+um status, etc.). É por isso que dados de origem chegam separados em tabelas
+como `orders`, `customers`, `products`, `order_items`.
+
+Bancos analíticos (OLAP), por outro lado, usam **modelagem dimensional**
+(star schema, no caso deste projeto) — o objetivo é otimizar para leitura e
+consulta analítica, aceitando desnormalização proposital (repetição de dados)
+em troca de consultas mais simples e rápidas.
+
+**Síntese:** banco transacional = modelagem relacional; banco analítico =
+modelagem dimensional. São propósitos opostos (escrita vs. leitura,
+integridade vs. performance de consulta), por isso um pipeline de
+transformação (bronze → silver → gold) é necessário — não seria possível
+simplesmente espelhar a estrutura do banco transacional para uso analítico.
