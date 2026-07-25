@@ -195,3 +195,36 @@ o DuckDB precisou ser fixado em uma versão específica (`<1.4`, resultando
 em `1.3.2`) devido à descontinuação de suporte ao Python 3.9 nas versões
 mais recentes da biblioteca — mesmo padrão de conflito já observado com
 `pyarrow`, `pandas` e `boto3`.
+
+## 10. DuckDB vs. Athena — por que não são ferramentas concorrentes
+
+**Dúvida original:** já que o Athena existe na arquitetura do projeto e serve
+justamente para consultas ad-hoc (consultas pontuais, feitas na hora, sem
+planejamento prévio — em oposição a consultas estruturadas e recorrentes de
+produção), por que adicionar o DuckDB como mais uma ferramenta na stack, ao
+invés de usar o Athena para inspecionar os dados durante o desenvolvimento?
+
+**Esclarecimento:** a comparação não é "DuckDB vs. Athena" como ferramentas
+concorrentes — é sobre **em que momento do pipeline cada uma está
+disponível**.
+
+O Athena só consegue consultar uma tabela que já está registrada no Glue
+Data Catalog, e esse registro só acontece depois que um **Crawler** roda
+sobre os dados. Como o Crawler ainda não foi criado neste ponto do projeto,
+o Athena literalmente não "enxerga" os arquivos Parquet em `silver/` e
+`gold/` — para ele, essas pastas no S3 ainda são invisíveis, mesmo contendo
+dados válidos.
+
+**Conclusão:**
+- **Antes do Crawler existir** (fase atual de desenvolvimento): DuckDB serve
+  como ferramenta de inspeção rápida, sem necessidade de catalogação, sem
+  custo de AWS, direto do terminal local.
+- **Depois que o Crawler catalogar silver/gold**: o Athena assume o papel de
+  consulta ad-hoc oficial da arquitetura, integrado ao fluxo real do projeto
+  (S3 → Glue → Athena → QuickSight).
+
+O DuckDB não faz parte da arquitetura final do pipeline — é uma ferramenta
+de bastidor, usada apenas pelo desenvolvedor durante a fase de construção,
+preenchendo a lacuna temporal que existe antes da catalogação via Crawler.
+No diagrama de arquitetura final do projeto, apenas o Athena aparece como
+camada de consulta.
