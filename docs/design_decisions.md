@@ -171,3 +171,27 @@ escolha depende do que a coluna afetada será usada para fazer downstream
 (ex: nulos em coordenadas geográficas tendem a quebrar visualizações de mapa
 em ferramentas de BI, o que pesaria a favor de exclusão ou tratamento
 explícito antes da gold).
+
+## 9. DuckDB como ferramenta auxiliar de inspeção de dados
+
+**Contexto:** ao longo do desenvolvimento das camadas silver/gold, surgiu a
+necessidade de visualizar e validar o conteúdo dos arquivos Parquet
+armazenados no S3, sem precisar baixá-los manualmente a cada verificação.
+
+**Decisão:** adotado o DuckDB como ferramenta auxiliar de inspeção local,
+instalado como dependência de desenvolvimento (`--group dev`), já que não
+participa da lógica do pipeline em produção (Glue) — serve apenas como
+camada de conveniência para o desenvolvedor.
+
+**Por que DuckDB:** capacidade de consultar arquivos Parquet diretamente no
+S3 via SQL, sem necessidade de download prévio, permitindo validação rápida
+de schema e conteúdo a qualquer momento do desenvolvimento. Também reforça
+uma ferramenta já usada anteriormente no TCC (arquitetura Lakehouse com
+dbt + DuckDB), mantendo consistência de ferramentas entre os dois projetos
+de portfólio.
+
+**Nota de compatibilidade:** assim como outras dependências deste projeto,
+o DuckDB precisou ser fixado em uma versão específica (`<1.4`, resultando
+em `1.3.2`) devido à descontinuação de suporte ao Python 3.9 nas versões
+mais recentes da biblioteca — mesmo padrão de conflito já observado com
+`pyarrow`, `pandas` e `boto3`.
