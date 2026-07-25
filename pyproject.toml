@@ -24,5 +24,6 @@ build-backend = "poetry.core.masonry.api"
 dev = [
     "pytest (<9.0)",
     "black (<25.0)",
-    "ruff (<0.16)"
+    "ruff (<0.16)",
+    "duckdb (<1.4)"
 ]
