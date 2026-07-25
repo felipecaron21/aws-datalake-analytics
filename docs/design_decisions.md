@@ -78,3 +78,26 @@ contextos reais, como dados bancários/corporativos):
 Esse tipo de cuidado é diretamente relacionado a práticas de compliance com
 a LGPD (minimização de dados sensíveis armazenados sem necessidade), mesmo
 quando o dado aparece de forma não intencional dentro de campos livres.
+
+## 5. Granularidade da tabela `geolocation`
+
+**Investigação:** ao processar `geolocation`, notou-se que a tabela tem
+~1 milhão de linhas, enquanto o dataset tem apenas ~100 mil pedidos — uma
+proporção que não se explicava por uma simples correspondência 1:1 com
+pedidos ou clientes.
+
+**Descoberta:** verificação direta nos dados mostrou 1.000.163 linhas totais
+contra apenas 19.015 valores únicos de `geolocation_zip_code_prefix` — uma
+média de ~52 registros de latitude/longitude por prefixo de CEP.
+
+**Conclusão:** a tabela não representa "um CEP = uma coordenada fixa". Um
+prefixo de CEP cobre uma área geográfica (não um ponto único), e a tabela
+contém múltiplas coordenadas GPS reais distintas que caem dentro da mesma
+área de CEP — provavelmente coletadas de endereços reais.
+
+**Implicação para a camada silver (decisão em aberto, a resolver quando essa
+camada for construída):** ao usar `geolocation` para enriquecer outras
+tabelas via `zip_code_prefix` (ex: obter a lat/long de um cliente ou
+vendedor), será necessário decidir uma estratégia de agregação — candidatas
+incluem usar a média de lat/long por CEP, ou selecionar uma ocorrência
+representativa — já que hoje existe uma relação 1:N entre CEP e coordenadas.
