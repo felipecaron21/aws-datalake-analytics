@@ -180,6 +180,21 @@ typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.13\""}
 test = ["pytest (>=6)"]
 
 [[package]]
+name = "holidays"
+version = "0.59"
+description = "World Holidays Framework"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "holidays-0.59-py3-none-any.whl", hash = "sha256:4576ec7aaad7cd66463236c110bcbd533ac7e739e0e9d3cbeccf8107384a8a92"},
+    {file = "holidays-0.59.tar.gz", hash = "sha256:c5cd2e1c0c27a64217b10faf2e8fcc224f5bb64087b56b70c6aff21f6379e6e4"},
+]
+
+[package.dependencies]
+python-dateutil = "*"
+
+[[package]]
 name = "iniconfig"
 version = "2.1.0"
 description = "brain-dead simple config-ini parsing"
@@ -708,4 +723,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<3.10"
-content-hash = "322f0a5a9b3ddfea0cf2b6b827437bfe9b3bd277162c5de0fbc7133fd83fb3ce"
+content-hash = "fa7f74549974ccd489e06b5353f882b651bde22c1f118da52dd90a94a4aa8428"
