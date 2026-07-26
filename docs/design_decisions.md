@@ -228,3 +228,43 @@ de bastidor, usada apenas pelo desenvolvedor durante a fase de construção,
 preenchendo a lacuna temporal que existe antes da catalogação via Crawler.
 No diagrama de arquitetura final do projeto, apenas o Athena aparece como
 camada de consulta.
+
+## 11. Dimensão dim_date — propósito e estratégia de geração
+
+**Propósito da tabela:** centralizar e padronizar atributos derivados de data
+(ano, mês, trimestre, dia da semana) para consumo analítico, evitando que
+cada consulta precise recalcular essas derivações repetidamente (ex:
+`EXTRACT(QUARTER FROM ...)` em toda query), e garantindo consistência entre
+diferentes relatórios/dashboards que dependem de noções de tempo.
+
+**Estratégia de geração — dataset estático (este projeto):** como o dataset
+Olist é estático (sem novos dados chegando), o intervalo de datas da
+dimensão foi definido varrendo todas as colunas de data disponíveis nas
+tabelas `orders` e `order_reviews`, calculando o mínimo e o máximo entre
+todas elas — resultando no menor e maior valor de data real (e projetado)
+existentes no dataset.
+
+**Colunas de data consideradas:** todas as datas de `orders`
+(`order_purchase_timestamp`, `order_approved_at`,
+`order_delivered_carrier_date`, `order_delivered_customer_date`,
+`order_estimated_delivery_date`) e de `order_reviews`
+(`review_creation_date`, `review_answer_timestamp`).
+
+**Decisão sobre datas estimadas/futuras:** `order_estimated_delivery_date`
+foi incluída no cálculo do intervalo, mesmo sendo uma data projetada (não
+necessariamente realizada) — isso estica o intervalo da dimensão para além
+da última data "real" do dataset, mas garante que qualquer análise que
+utilize essa coluna encontre correspondência na dimensão via join.
+
+**Estratégia equivalente em ambiente de produção (dataset que cresce ao
+longo do tempo):** ao invés de calcular o intervalo a partir dos dados
+existentes, seria comum gerar a `dim_date` cobrindo um intervalo futuro
+generoso (ex: do início dos dados históricos até o final do ano corrente,
+ou alguns anos à frente), ajustando/estendendo esse intervalo periodicamente
+(ex: no início de cada ano). Essa prática é comum porque a tabela é barata
+de manter (poucas colunas, um registro por dia), e evita a necessidade de
+recriar ou expandir a dimensão com frequência conforme novos dados chegam —
+o mesmo princípio de "gerar mais do que o estritamente necessário agora"
+está presente em ambos os casos (estático e produção), mudando apenas a
+origem do intervalo (calculado a partir dos dados existentes vs. definido
+de forma prospectiva).
