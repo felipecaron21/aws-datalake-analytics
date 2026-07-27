@@ -229,42 +229,65 @@ preenchendo a lacuna temporal que existe antes da catalogação via Crawler.
 No diagrama de arquitetura final do projeto, apenas o Athena aparece como
 camada de consulta.
 
-## 11. Dimensão dim_date — propósito e estratégia de geração
+## 11. Dimensão dim_date — propósito, geração e feriados
 
-**Propósito da tabela:** centralizar e padronizar atributos derivados de data
-(ano, mês, trimestre, dia da semana) para consumo analítico, evitando que
-cada consulta precise recalcular essas derivações repetidamente (ex:
-`EXTRACT(QUARTER FROM ...)` em toda query), e garantindo consistência entre
-diferentes relatórios/dashboards que dependem de noções de tempo.
+**Propósito da tabela:** centralizar e padronizar atributos derivados de
+data (ano, mês, trimestre, dia da semana, nome do mês, feriados) para
+consumo analítico, evitando que cada consulta precise recalcular essas
+derivações repetidamente, e garantindo consistência entre diferentes
+relatórios/dashboards que dependem de noções de tempo.
 
 **Estratégia de geração — dataset estático (este projeto):** como o dataset
-Olist é estático (sem novos dados chegando), o intervalo de datas da
-dimensão foi definido varrendo todas as colunas de data disponíveis nas
-tabelas `orders` e `order_reviews`, calculando o mínimo e o máximo entre
-todas elas — resultando no menor e maior valor de data real (e projetado)
-existentes no dataset.
+Olist é estático, o intervalo de datas da dimensão foi definido varrendo
+todas as colunas de data disponíveis em `orders` (`order_purchase_timestamp`,
+`order_approved_at`, `order_delivered_carrier_date`,
+`order_delivered_customer_date`, `order_estimated_delivery_date`) e
+`order_reviews` (`review_creation_date`, `review_answer_timestamp`),
+calculando o mínimo e o máximo entre todas elas.
 
-**Colunas de data consideradas:** todas as datas de `orders`
-(`order_purchase_timestamp`, `order_approved_at`,
-`order_delivered_carrier_date`, `order_delivered_customer_date`,
-`order_estimated_delivery_date`) e de `order_reviews`
-(`review_creation_date`, `review_answer_timestamp`).
+**Cálculo do intervalo:** para cada tabela, calculou-se o mínimo/máximo por
+coluna (resultando em uma Series de valores parciais por tabela). Essas
+Series foram unidas com `pd.concat()`, e um segundo `.min()`/`.max()` foi
+aplicado sobre o resultado concatenado para chegar a um único valor final —
+evitando a necessidade de unir fisicamente as tabelas inteiras (uma
+alternativa mais custosa seria um UNION de todas as linhas antes de ordenar
+e filtrar extremos).
 
 **Decisão sobre datas estimadas/futuras:** `order_estimated_delivery_date`
-foi incluída no cálculo do intervalo, mesmo sendo uma data projetada (não
-necessariamente realizada) — isso estica o intervalo da dimensão para além
-da última data "real" do dataset, mas garante que qualquer análise que
-utilize essa coluna encontre correspondência na dimensão via join.
+foi incluída no cálculo do intervalo, mesmo sendo uma data projetada — isso
+estica o intervalo da dimensão para além da última data "real" do dataset,
+garantindo que qualquer análise usando essa coluna encontre correspondência
+via join.
 
-**Estratégia equivalente em ambiente de produção (dataset que cresce ao
-longo do tempo):** ao invés de calcular o intervalo a partir dos dados
-existentes, seria comum gerar a `dim_date` cobrindo um intervalo futuro
-generoso (ex: do início dos dados históricos até o final do ano corrente,
-ou alguns anos à frente), ajustando/estendendo esse intervalo periodicamente
-(ex: no início de cada ano). Essa prática é comum porque a tabela é barata
-de manter (poucas colunas, um registro por dia), e evita a necessidade de
-recriar ou expandir a dimensão com frequência conforme novos dados chegam —
-o mesmo princípio de "gerar mais do que o estritamente necessário agora"
-está presente em ambos os casos (estático e produção), mudando apenas a
-origem do intervalo (calculado a partir dos dados existentes vs. definido
-de forma prospectiva).
+**Equivalente em produção:** em um dataset que cresce ao longo do tempo, a
+prática comum é gerar a dimensão cobrindo um intervalo futuro generoso (ex:
+até o final do ano corrente), ajustando periodicamente (ex: início de cada
+ano), já que a tabela é barata de manter (poucas colunas, um registro por
+dia). O princípio de "gerar mais do que o estritamente necessário agora" é
+o mesmo em ambos os cenários — muda apenas a origem do intervalo (calculado
+a partir dos dados existentes vs. definido de forma prospectiva).
+
+**Geração do calendário e atributos derivados:** utilizou-se `pd.date_range()`
+para gerar uma sequência diária entre o mínimo e o máximo calculados, seguida
+da extração de atributos via o acessador `.dt` do pandas (`.dt.year`,
+`.dt.month`, `.dt.quarter`, `.dt.day_name()`, `.dt.month_name()`). O horário
+herdado dos timestamps originais foi removido com `.dt.normalize()`, já que
+a granularidade da dimensão é diária, não intra-dia.
+
+**Feriados nacionais:** adicionada uma coluna booleana `is_holiday`, usando
+a biblioteca `holidays` (calendário `holidays.Brazil()`) combinada com
+`.apply()` e uma função `lambda` (função anônima definida em uma única
+linha, usada quando a lógica é simples e não reaproveitada em outro lugar).
+
+**Classificação da dependência `holidays`:** ao contrário do DuckDB (usado
+apenas para inspeção local, nunca participando do dado gerado), a biblioteca
+`holidays` gera uma coluna que compõe o dado final gravado na gold — por
+isso foi classificada como dependência de **produção** (mesmo grupo de
+`boto3`, `pandas`, `pyarrow`), não de desenvolvimento. O critério de
+classificação é: "essa dependência participa da lógica de negócio que gera
+o dado final, ou é apenas uma ferramenta auxiliar do desenvolvedor?".
+
+**Nota de compatibilidade:** `holidays` precisou ser fixado em `<0.60`
+(resultando em `0.59`) devido à descontinuação de suporte ao Python 3.9 nas
+versões mais recentes — mesmo padrão de conflito já observado com outras
+dependências deste projeto.
