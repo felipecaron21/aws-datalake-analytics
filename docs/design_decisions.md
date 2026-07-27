@@ -291,3 +291,33 @@ o dado final, ou é apenas uma ferramenta auxiliar do desenvolvedor?".
 (resultando em `0.59`) devido à descontinuação de suporte ao Python 3.9 nas
 versões mais recentes — mesmo padrão de conflito já observado com outras
 dependências deste projeto.
+
+## 12. Troubleshooting: permissão restrita por caminho na IAM Role do Glue
+
+**Problema encontrado:** ao criar o segundo Crawler (`silver_crawler`), ele
+executou com status "Completed", mas catalogou 0 tabelas — nenhum erro
+explícito apareceu na interface do Crawler.
+
+**Diagnóstico:** investigando os logs do CloudWatch (acessíveis via "View
+CloudWatch logs" na tela de execuções do Crawler), foi identificado um erro
+`AccessDenied` (S3, código 403) ao tentar ler os arquivos Parquet da camada
+silver.
+
+**Causa raiz:** a IAM Role criada automaticamente pelo assistente do Glue
+(`AWSGlueServiceRole-datalake_analytics`) recebeu uma política customizada
+gerada com base no caminho S3 informado na criação do **primeiro** Crawler
+(gold) — restringindo o `Resource` da política apenas a `gold/*`. Como essa
+mesma role foi reutilizada para o Crawler de silver, o acesso a `silver/*`
+foi negado.
+
+**Correção:** edição manual da política customizada
+(`AWSGlueServiceRole-datalake_analytics-EZCRC-s3Policy`), adicionando um
+segundo ARN à lista de `Resource`, cobrindo também `silver/*`, mantendo a
+mesma condição de segurança existente (`aws:ResourceAccount`).
+
+**Aprendizado:** ao reutilizar uma IAM Role gerada automaticamente pelo
+assistente de um serviço AWS para múltiplos recursos (neste caso, múltiplos
+Crawlers apontando para caminhos S3 diferentes), é necessário revisar e
+ajustar manualmente as políticas de acesso — o assistente tende a restringir
+permissões ao escopo exato informado no momento da criação, não antecipando
+usos futuros da mesma role.
