@@ -336,3 +336,53 @@ e esse objetivo já foi atingido, optou-se por **não conectar nenhuma
 ferramenta de BI** neste momento. As camadas silver e gold, já catalogadas
 no Glue Data Catalog e consultáveis via Athena, ficam documentadas como
 prontas para conexão com qualquer ferramenta de BI compatível.
+
+## 15. Migração para Glue Jobs — desenvolvimento local vs. execução em produção
+
+**Contexto:** após validar toda a lógica de transformação rodando localmente
+(via Poetry, com debug interativo), decidiu-se migrar os scripts para
+rodarem como **Glue Jobs** (Python Shell) — refletindo um pipeline de dados
+real, que não depende de execução manual em uma máquina local.
+
+**Coexistência de dois ambientes:** o código em `src/aws_datalake_analytics/`
+(local) não foi descontinuado — ele representa a camada de desenvolvimento
+e validação, onde a lógica de negócio foi construída e testada
+iterativamente. Uma pasta separada, `glue_jobs/`, contém versões adaptadas
+desses scripts para execução real na AWS. Essa separação reflete um fluxo
+profissional comum: desenvolver e validar localmente (rápido, barato,
+interativo) antes de migrar para produção (mais lento de iterar, mas fiel
+ao ambiente real).
+
+**Ajustes necessários na migração:**
+1. **Parametrização:** valores antes fixos no código (nome do bucket,
+   caminhos de arquivo) passaram a ser recebidos via `getResolvedOptions`,
+   lidos a partir de "Job parameters" configurados no Glue — permitindo
+   reutilizar o mesmo script para diferentes ambientes/caminhos sem alterar
+   código-fonte.
+2. **Bibliotecas de terceiros:** o Glue Python Shell (Python 3.9) já vem com
+   bibliotecas comuns pré-instaladas (incluindo pandas), simplificando a
+   migração. Bibliotecas adicionais (ex: pyarrow, holidays) podem ser
+   adicionadas via parâmetro `--additional-python-modules`, sem necessidade
+   de empacotamento manual.
+3. **Módulos próprios do projeto:** o módulo `utils/s3_helpers.py`, que no
+   ambiente local é importado como parte de um pacote estruturado (via
+   Poetry), precisou ser disponibilizado como arquivo avulso via o campo
+   "Referenced files path" do Glue Job — mudando a forma de import de
+   `from aws_datalake_analytics.utils.s3_helpers import ...` (caminho de
+   pacote) para `from s3_helpers import ...` (arquivo solto).
+
+**Troubleshooting encontrado — permissões por caminho no S3:**
+Ao rodar o primeiro Job, três erros sucessivos de permissão apareceram, um
+de cada vez, à medida que o script tentava acessar diferentes prefixos do
+bucket (`scripts/`, depois `raw/`, depois `bronze/`) — todos negados pela
+mesma política restritiva por caminho já identificada anteriormente (ver
+item 12). Cada erro foi resolvido adicionando o prefixo faltante à lista de
+`Resource` da política.
+
+**Decisão de manter granularidade na política, mesmo após múltiplas
+correções:** considerou-se simplificar a política liberando o bucket inteiro
+de uma vez, evitando repetir esse processo a cada novo caminho acessado.
+Optou-se por **manter a política granular**, por prefixo específico,
+mesmo sendo mais trabalhoso — para preservar a coerência com o princípio de
+menor privilégio (least privilege) já adotado desde a criação do usuário
+IAM no início do projeto.
