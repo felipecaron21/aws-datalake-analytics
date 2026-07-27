@@ -321,3 +321,18 @@ Crawlers apontando para caminhos S3 diferentes), é necessário revisar e
 ajustar manualmente as políticas de acesso — o assistente tende a restringir
 permissões ao escopo exato informado no momento da criação, não antecipando
 usos futuros da mesma role.
+
+## 14. Decisão sobre ferramenta de BI final
+
+**Contexto:** o plano original era usar Amazon QuickSight como camada de
+visualização final (S3 → Glue → Athena → QuickSight). Ao investigar o setup
+real, foram encontrados empecilhos relevantes na ferramenta (mudanças de
+produto e modelo de custo) que a tornaram inviável para este projeto de
+portfólio pessoal.
+
+**Decisão final:** como o objetivo principal deste projeto sempre foi a
+engenharia de dados — pipeline, modelagem dimensional e arquitetura AWS —
+e esse objetivo já foi atingido, optou-se por **não conectar nenhuma
+ferramenta de BI** neste momento. As camadas silver e gold, já catalogadas
+no Glue Data Catalog e consultáveis via Athena, ficam documentadas como
+prontas para conexão com qualquer ferramenta de BI compatível.
