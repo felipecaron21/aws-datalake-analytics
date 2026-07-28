@@ -386,3 +386,20 @@ Optou-se por **manter a política granular**, por prefixo específico,
 mesmo sendo mais trabalhoso — para preservar a coerência com o princípio de
 menor privilégio (least privilege) já adotado desde a criação do usuário
 IAM no início do projeto.
+
+## 16. Orquestração com Glue Workflows
+
+**Contexto:** com todos os 24 Glue Jobs criados (9 raw_to_bronze, 8
+bronze_to_silver, 7 silver_to_gold), surgiu a necessidade de garantir a
+ordem correta de execução entre as camadas — silver não deve rodar antes
+que toda a bronze termine com sucesso, e o mesmo vale para gold em relação
+à silver.
+
+**Diferença entre agendamento e orquestração:** um simples agendamento
+(schedule) por horário não garante essa dependência — jobs poderiam rodar
+fora de ordem ou sobre dados incompletos caso uma etapa anterior atrasasse.
+Orquestração define explicitamente a dependência entre etapas ("rode X,
+espere sucesso, só então rode Y"), independente de horário.
+
+**Solução adotada:** AWS Glue Workflows, com a seguinte estrutura de
+triggers e jobs:
