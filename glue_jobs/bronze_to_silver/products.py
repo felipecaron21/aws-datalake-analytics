@@ -7,7 +7,10 @@ from s3_helpers import (
     escrever_parquet_no_s3,
 )
 
-args = getResolvedOptions(sys.argv, ["bucket_name", "bronze_key_products", "bronze_key_translate", "silver_key"])
+args = getResolvedOptions(
+    sys.argv,
+    ["bucket_name", "bronze_key_products", "bronze_key_translate", "silver_key"],
+)
 
 bucket_name = args["bucket_name"]
 bronze_key_products = args["bronze_key_products"]
