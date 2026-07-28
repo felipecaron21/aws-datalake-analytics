@@ -78,10 +78,3 @@ As decisões relevantes do projeto estão documentadas em [docs/design-decisions
 ## Camada de consumo (BI)
 
 O projeto não conecta nenhuma ferramenta de BI específica no momento. As camadas silver e gold já estão catalogadas e prontas para conexão com qualquer ferramenta compatível com Athena, como Metabase, Power BI ou Looker. O contexto dessa decisão está registrado em design-decisions.md.
-
-## Como rodar localmente
-
-    poetry install
-    poetry run python src/aws_datalake_analytics/raw_to_bronze/orders.py
-
-É necessário ter credenciais AWS configuradas (aws configure) com acesso ao bucket S3 do projeto.
